@@ -4,7 +4,7 @@ use argparse_rs::{ArgParser, ArgType};
 use std::{env, fs::ReadDir};
 
 fn main() {
-    let mut parser = ArgParser::new("argparse".into());
+    let mut parser = ArgParser::new("ls".into());
     configure_parser(&mut parser);
 
     let args: Vec<String> = env::args().collect();
@@ -18,10 +18,10 @@ fn main() {
 }
 
 fn parse_args(args_list: &Vec<String>, parser: &ArgParser) -> Args {
-    let p_res = parser.parse(args_list.iter()).unwrap();
+    let p_res = parser.parse(args_list.iter(), false).unwrap();
 
     let arg_long = p_res.get("long").unwrap();
-    let arg_hidden = p_res.get("hidden").unwrap();
+    let arg_hidden = p_res.get("all").unwrap();
 
     return Args {
         long: arg_long,
@@ -39,11 +39,11 @@ fn configure_parser(parser: &mut ArgParser) {
         ArgType::Flag,
     );
     parser.add_opt(
-        "hidden",
+        "all",
         Some("false"),
-        'h',
+        'a',
         false,
-        "Show hidden entries",
+        "Show all entries, even hidden ones",
         ArgType::Flag,
     );
 }
@@ -60,7 +60,6 @@ fn list_elements(entries: ReadDir, show_hidden_entries: bool) {
     }
 }
 
-#[derive(Debug)]
 struct Args {
     long: bool,
     hidden: bool,
