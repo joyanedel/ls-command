@@ -1,7 +1,7 @@
 extern crate argparse_rs;
 
 use argparse_rs::{ArgParser, ArgType};
-use std::{env, fs::ReadDir};
+use std::{env, ffi::OsString, fmt::Display, fs::ReadDir};
 
 fn main() {
     let mut parser = ArgParser::new("ls".into());
@@ -56,7 +56,7 @@ fn list_elements(entries: ReadDir, show_hidden_entries: bool) {
             continue;
         }
 
-        println!("{:?}", file_entry.file_name());
+        println!("{}", file_entry.file_name().to_str().unwrap());
     }
 }
 
