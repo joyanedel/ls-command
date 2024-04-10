@@ -1,77 +1,66 @@
+mod parser;
+
 extern crate argparse_rs;
 
-use argparse_rs::{ArgParser, ArgType};
+use argparse_rs::ArgType;
+use parser::ProgramArg;
 use std::{
+    collections::HashMap,
     env,
     fs::{DirEntry, ReadDir},
     os::unix::fs::{MetadataExt, PermissionsExt},
+    process::exit,
 };
 
 fn main() {
-    let mut parser = ArgParser::new("ls".into());
-    configure_parser(&mut parser);
+    let args: Vec<ProgramArg> = vec![
+        ProgramArg {
+            name: "long",
+            default: Some("false"),
+            flag: 'l',
+            required: false,
+            help: "Show output in long format",
+            type_: ArgType::Flag,
+        },
+        ProgramArg {
+            name: "all",
+            default: Some("false"),
+            flag: 'a',
+            required: false,
+            help: "Show all entries, even hidden ones",
+            type_: ArgType::Flag,
+        },
+    ];
+    let (parser, parsed_args) = parser::create_parser(String::from("ls-command"), args);
 
-    let args: Vec<String> = env::args().collect();
-
-    let parsed_arguments = parse_args(&args, &parser);
-    let pwd = env::current_dir().unwrap();
-
-    let paths = pwd.read_dir().unwrap();
-
-    if parsed_arguments.help {
+    if *parsed_args.get("help").unwrap() {
         parser.help();
-        return;
+        exit(0);
     }
 
-    list_elements(paths, &parsed_arguments);
+    let pwd = env::current_dir().unwrap();
+    let paths = pwd.read_dir().unwrap();
+
+    list_elements(paths, &parsed_args);
 }
 
-fn configure_parser(parser: &mut ArgParser) {
-    parser.add_opt(
-        "long",
-        Some("false"),
-        'l',
-        false,
-        "Show output in long format",
-        ArgType::Flag,
-    );
-    parser.add_opt(
-        "all",
-        Some("false"),
-        'a',
-        false,
-        "Show all entries, even hidden ones",
-        ArgType::Flag,
-    );
-}
+#[warn(dead_code)]
+fn list_elements(entries: ReadDir, args: &HashMap<String, bool>) {
+    let is_long_format = *args.get("long").unwrap();
+    let is_hidden_entries_allowed = *args.get("all").unwrap();
 
-fn parse_args(args_list: &Vec<String>, parser: &ArgParser) -> Args {
-    let p_res = parser.parse(args_list.iter(), false).unwrap();
-
-    let arg_long = p_res.get("long").unwrap();
-    let arg_hidden = p_res.get("all").unwrap();
-    let arg_help = p_res.get("help").unwrap();
-
-    return Args {
-        long: arg_long,
-        hidden: arg_hidden,
-        help: arg_help,
-    };
-}
-
-fn list_elements(entries: ReadDir, args: &Args) {
-    if args.long {
+    if is_long_format {
         println!("Perms\tUID\tSize\tFilename")
     }
 
     for path in entries {
         let file_entry = path.unwrap();
         let is_hidden_entry = file_entry.file_name().to_str().unwrap().starts_with(".");
-        if is_hidden_entry && !args.hidden {
+        if is_hidden_entry && !is_hidden_entries_allowed {
             continue;
         }
 
-        display_entry(&file_entry, args.long)
+        display_entry(&file_entry, is_long_format)
     }
 }
 
@@ -94,10 +83,4 @@ fn display_entry(entry: &DirEntry, long_format: bool) {
     } else {
         println!("{}{}", entry.file_name().to_str().unwrap(), suffix)
     }
-}
-
-struct Args {
-    long: bool,
-    hidden: bool,
-    help: bool,
 }
